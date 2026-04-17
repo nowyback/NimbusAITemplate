@@ -1,0 +1,22 @@
+{
+  "name": "token-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord bot with token system for question management",
+  "main": "discord-ollama-bot.js",
+  "scripts": {
+    "start": "node start-discord-bot.js",
+    "setup": "node setup-discord-bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^17.4.2"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "tokens",
+    "questions"
+  ],
+  "author": "",
+  "license": "MIT"
+}
