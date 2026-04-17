@@ -8,6 +8,7 @@ tokens.json
 banned-users.json
 prompt-log.json
 processing-messages.json
+chat-sessions.json
 
 # Auto-Generated Configuration
 discord-models.txt

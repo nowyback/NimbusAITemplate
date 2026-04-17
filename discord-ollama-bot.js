@@ -5,6 +5,7 @@ const { exec } = require('child_process');
 const http = require('http'); // For API requests
 const https = require('https'); // For downloading Discord images
 const InternetAccess = require('./internet-access'); // Internet access module
+const ChatSessions = require('./chat-sessions'); // Chat sessions module
 
 class TokenDiscordBot {
     constructor(token, ownerId) {
@@ -44,6 +45,13 @@ class TokenDiscordBot {
             method: process.env.INTERNET_METHOD || 'search',
             allowedDomains: process.env.ALLOWED_DOMAINS ? process.env.ALLOWED_DOMAINS.split(',').map(d => d.trim()) : [],
             rateLimit: parseInt(process.env.RATE_LIMIT) || 10
+        });
+        
+        // Initialize chat sessions
+        this.chatSessions = new ChatSessions({
+            sessionTimeout: parseInt(process.env.SESSION_TIMEOUT) || (3 * 24 * 60 * 60 * 1000), // 3 days default
+            maxSessionsPerUser: parseInt(process.env.MAX_SESSIONS_PER_USER) || 5,
+            maxMessagesPerSession: parseInt(process.env.MAX_MESSAGES_PER_SESSION) || 50
         });
         
         this.setupEventHandlers();
@@ -216,26 +224,35 @@ class TokenDiscordBot {
         });
     }
 
-    async askLlama3(question, model = 'llama3:8b', images = []) {
+    async askLlama3(question, model = 'llama3:8b', images = [], userId = null, guildId = null) {
         // Check if Ollama is connected
         if (!this.ollamaConnected) {
             const ownerId = this.ownerId;
             return `Nimbus AI unavailable at the moment. If this persists contact <@${ownerId}>`;
         }
         
+        // Add conversation context if user ID provided
+        let enhancedQuestion = question;
+        if (userId && this.chatSessions) {
+            const conversationContext = this.chatSessions.formatConversationForAI(userId, guildId, 10);
+            if (conversationContext) {
+                enhancedQuestion = conversationContext + question;
+            }
+        }
+        
         return new Promise((resolve, reject) => {
             try {
-                console.log(`Sending request to Ollama API: model=${model}, question="${question.substring(0, 50)}...", images=${images.length}`);
+                console.log(`Sending request to Ollama API: model=${model}, question="${enhancedQuestion.substring(0, 50)}...", images=${images.length}`);
                 console.log('Request payload:', JSON.stringify({
                     model: model,
-                    messages: [{ role: 'user', content: question, ...(images && images.length > 0 ? { images } : {}) }],
+                    messages: [{ role: 'user', content: enhancedQuestion, ...(images && images.length > 0 ? { images } : {}) }],
                     stream: false
                 }, null, 2));
                 
                 // Create message content with images if provided
                 const messageContent = {
                     role: 'user',
-                    content: question
+                    content: enhancedQuestion
                 };
                 
                 // Add images to message if provided
@@ -981,9 +998,18 @@ ${this.internetAccess.enabled && this.internetAccess.allowedDomains.length > 0 ?
                     const result = await this.internetAccess.accessInternet(userId, query);
                     const formattedResult = this.internetAccess.formatForAI(result, 'search');
                     
+                    // Get guild ID for session context
+                    const guildId = message.guild ? message.guild.id : null;
+                    
                     // Add search results to AI context
                     const enhancedQuestion = `${query}\n\n${formattedResult}\n\nBased on the search results above, please answer: ${query}`;
-                    const response = await this.askLlama3(enhancedQuestion, this.defaultModel);
+                    const response = await this.askLlama3(enhancedQuestion, this.defaultModel, [], userId, guildId);
+                    
+                    // Add user search query to chat session
+                    this.chatSessions.addMessage(userId, guildId, query, true, this.defaultModel);
+                    
+                    // Add AI response to chat session
+                    this.chatSessions.addMessage(userId, guildId, response, false, this.defaultModel);
                     
                     // Split response into chunks if needed
                     const chunks = this.splitMessage(response);
@@ -1018,9 +1044,18 @@ ${this.internetAccess.enabled && this.internetAccess.allowedDomains.length > 0 ?
                     const result = await this.internetAccess.accessInternet(userId, '', url);
                     const formattedResult = this.internetAccess.formatForAI(result, 'fetch');
                     
+                    // Get guild ID for session context
+                    const guildId = message.guild ? message.guild.id : null;
+                    
                     // Add fetched content to AI context
                     const enhancedQuestion = `Please summarize and analyze the content from ${url}:\n\n${formattedResult}`;
-                    const response = await this.askLlama3(enhancedQuestion, this.defaultModel);
+                    const response = await this.askLlama3(enhancedQuestion, this.defaultModel, [], userId, guildId);
+                    
+                    // Add user fetch request to chat session
+                    this.chatSessions.addMessage(userId, guildId, `Fetch: ${url}`, true, this.defaultModel);
+                    
+                    // Add AI response to chat session
+                    this.chatSessions.addMessage(userId, guildId, response, false, this.defaultModel);
                     
                     // Split response into chunks if needed
                     const chunks = this.splitMessage(response);
@@ -1034,6 +1069,36 @@ ${this.internetAccess.enabled && this.internetAccess.allowedDomains.length > 0 ?
                 } catch (error) {
                     await message.reply(`Fetch failed: ${error.message}`);
                 }
+                return;
+            }
+
+            // Chat session management commands
+            if (message.content === '> clear' || message.content === '> reset') {
+                const guildId = message.guild ? message.guild.id : null;
+                const deleted = this.chatSessions.deleteSession(userId, guildId);
+                
+                if (deleted) {
+                    await message.reply('Chat session cleared. Starting fresh conversation!');
+                } else {
+                    await message.reply('No active chat session to clear.');
+                }
+                return;
+            }
+
+            if (message.content.startsWith('> session')) {
+                const guildId = message.guild ? message.guild.id : null;
+                const sessionInfo = this.chatSessions.getSessionInfo(userId, guildId);
+                
+                const timeUntilExpiry = Math.max(0, Math.floor(sessionInfo.timeUntilExpiry / (1000 * 60 * 60))); // hours
+                
+                const sessionStats = `**Chat Session Info:**
+Messages: ${sessionInfo.messageCount}
+Age: ${Math.floor(sessionInfo.age / (1000 * 60 * 60))} hours
+Expires in: ${timeUntilExpiry} hours
+Model: ${sessionInfo.model || 'Default'}
+Guild: ${sessionInfo.guildId ? 'Server chat' : 'DM chat'}`;
+                
+                await message.reply(sessionStats);
                 return;
             }
 
@@ -1106,12 +1171,21 @@ ${this.internetAccess.enabled && this.internetAccess.allowedDomains.length > 0 ?
                         // Process images if any
                         const images = await this.processImages(message.attachments);
                         
-                        // Send question to Llama 3 with detected model and images
-                        const response = await this.askLlama3(modelInfo.cleanQuestion, modelInfo.model, images);
+                        // Get guild ID for session context
+                        const guildId = message.guild ? message.guild.id : null;
+                        
+                        // Send question to Llama 3 with detected model, images, and session context
+                        const response = await this.askLlama3(modelInfo.cleanQuestion, modelInfo.model, images, userId, guildId);
                         
                         // Stop editing and clean up
                         clearInterval(editInterval);
                         await processingMsg.delete().catch(() => {});
+                        
+                        // Add user message to chat session
+                        this.chatSessions.addMessage(userId, guildId, question, true, modelInfo.model);
+                        
+                        // Add AI response to chat session
+                        this.chatSessions.addMessage(userId, guildId, response, false, modelInfo.model);
                         
                         // Log successful prompt
                         this.logPrompt(userId, message.author.username, question, response, true, tokensNeeded);

@@ -233,13 +233,76 @@ $txtRateLimit.ForeColor = [Drawing.Color]::LightGray
 $txtRateLimit.BorderStyle = "FixedSingle"
 $form.Controls.Add($txtRateLimit)
 
+# Chat Session Section
+$lblChatSession = New-Object Windows.Forms.Label
+$lblChatSession.Text = "Chat Sessions:"
+$lblChatSession.ForeColor = [Drawing.Color]::LightGray
+$lblChatSession.Font = $fontSub
+$lblChatSession.Size = New-Object Drawing.Size(150, 20)
+$lblChatSession.Location = New-Object Drawing.Point(25, 460)
+$form.Controls.Add($lblChatSession)
+
+# Session timeout
+$lblSessionTimeout = New-Object Windows.Forms.Label
+$lblSessionTimeout.Text = "Session Timeout (hours):"
+$lblSessionTimeout.ForeColor = [Drawing.Color]::LightGray
+$lblSessionTimeout.Font = $fontSub
+$lblSessionTimeout.Size = New-Object Drawing.Size(200, 20)
+$lblSessionTimeout.Location = New-Object Drawing.Point(25, 480)
+$form.Controls.Add($lblSessionTimeout)
+
+$txtSessionTimeout = New-Object Windows.Forms.TextBox
+$txtSessionTimeout.Location = New-Object Drawing.Point(25, 500)
+$txtSessionTimeout.Size = New-Object Drawing.Size(100, 30)
+$txtSessionTimeout.Text = "72"
+$txtSessionTimeout.BackColor = [Drawing.Color]::FromArgb(20, 20, 30)
+$txtSessionTimeout.ForeColor = [Drawing.Color]::LightGray
+$txtSessionTimeout.BorderStyle = "FixedSingle"
+$form.Controls.Add($txtSessionTimeout)
+
+# Max sessions per user
+$lblMaxSessions = New-Object Windows.Forms.Label
+$lblMaxSessions.Text = "Max Sessions Per User:"
+$lblMaxSessions.ForeColor = [Drawing.Color]::LightGray
+$lblMaxSessions.Font = $fontSub
+$lblMaxSessions.Size = New-Object Drawing.Size(200, 20)
+$lblMaxSessions.Location = New-Object Drawing.Point(250, 480)
+$form.Controls.Add($lblMaxSessions)
+
+$txtMaxSessions = New-Object Windows.Forms.TextBox
+$txtMaxSessions.Location = New-Object Drawing.Point(250, 500)
+$txtMaxSessions.Size = New-Object Drawing.Size(100, 30)
+$txtMaxSessions.Text = "5"
+$txtMaxSessions.BackColor = [Drawing.Color]::FromArgb(20, 20, 30)
+$txtMaxSessions.ForeColor = [Drawing.Color]::LightGray
+$txtMaxSessions.BorderStyle = "FixedSingle"
+$form.Controls.Add($txtMaxSessions)
+
+# Max messages per session
+$lblMaxMessages = New-Object Windows.Forms.Label
+$lblMaxMessages.Text = "Max Messages Per Session:"
+$lblMaxMessages.ForeColor = [Drawing.Color]::LightGray
+$lblMaxMessages.Font = $fontSub
+$lblMaxMessages.Size = New-Object Drawing.Size(200, 20)
+$lblMaxMessages.Location = New-Object Drawing.Point(450, 480)
+$form.Controls.Add($lblMaxMessages)
+
+$txtMaxMessages = New-Object Windows.Forms.TextBox
+$txtMaxMessages.Location = New-Object Drawing.Point(450, 500)
+$txtMaxMessages.Size = New-Object Drawing.Size(100, 30)
+$txtMaxMessages.Text = "50"
+$txtMaxMessages.BackColor = [Drawing.Color]::FromArgb(20, 20, 30)
+$txtMaxMessages.ForeColor = [Drawing.Color]::LightGray
+$txtMaxMessages.BorderStyle = "FixedSingle"
+$form.Controls.Add($txtMaxMessages)
+
 # Model Detection Section
 $lblModelDetection = New-Object Windows.Forms.Label
 $lblModelDetection.Text = "Model Detection:"
 $lblModelDetection.ForeColor = [Drawing.Color]::LightGray
 $lblModelDetection.Font = $fontSub
 $lblModelDetection.Size = New-Object Drawing.Size(150, 20)
-$lblModelDetection.Location = New-Object Drawing.Point(25, 460)
+$lblModelDetection.Location = New-Object Drawing.Point(25, 540)
 $form.Controls.Add($lblModelDetection)
 
 # Detect models button
@@ -249,7 +312,7 @@ $btnDetectModels.BackColor = [Drawing.Color]::FromArgb(100, 150, 255)
 $btnDetectModels.ForeColor = [Drawing.Color]::White
 $btnDetectModels.FlatStyle = "Flat"
 $btnDetectModels.Font = $fontSub
-$btnDetectModels.Location = New-Object Drawing.Point(25, 480)
+$btnDetectModels.Location = New-Object Drawing.Point(25, 560)
 $btnDetectModels.Size = New-Object Drawing.Size(150, 30)
 $form.Controls.Add($btnDetectModels)
 
@@ -259,7 +322,7 @@ $lblModelStatus.Text = "Click to detect local Ollama models..."
 $lblModelStatus.ForeColor = [Drawing.Color]::DimGray
 $lblModelStatus.Font = $fontSub
 $lblModelStatus.Size = New-Object Drawing.Size(375, 30)
-$lblModelStatus.Location = New-Object Drawing.Point(185, 485)
+$lblModelStatus.Location = New-Object Drawing.Point(185, 565)
 $form.Controls.Add($lblModelStatus)
 
 # Default Model (will be populated after detection)
@@ -268,11 +331,11 @@ $lblDefaultModel.Text = "Default Model:"
 $lblDefaultModel.ForeColor = [Drawing.Color]::LightGray
 $lblDefaultModel.Font = $fontSub
 $lblDefaultModel.Size = New-Object Drawing.Size(150, 20)
-$lblDefaultModel.Location = New-Object Drawing.Point(25, 530)
+$lblDefaultModel.Location = New-Object Drawing.Point(25, 610)
 $form.Controls.Add($lblDefaultModel)
 
 $comboDefaultModel = New-Object Windows.Forms.ComboBox
-$comboDefaultModel.Location = New-Object Drawing.Point(25, 550)
+$comboDefaultModel.Location = New-Object Drawing.Point(25, 630)
 $comboDefaultModel.Size = New-Object Drawing.Size(600, 30)
 $comboDefaultModel.BackColor = [Drawing.Color]::FromArgb(20, 20, 30)
 $comboDefaultModel.ForeColor = [Drawing.Color]::White
@@ -291,7 +354,7 @@ $lblModelConfig.Location = New-Object Drawing.Point(25, 600)
 $form.Controls.Add($lblModelConfig)
 
 $txtModelConfig = New-Object Windows.Forms.TextBox
-$txtModelConfig.Location = New-Object Drawing.Point(25, 620)
+$txtModelConfig.Location = New-Object Drawing.Point(25, 670)
 $txtModelConfig.Size = New-Object Drawing.Size(600, 120)
 $txtModelConfig.Text = "Models will be detected and configured here..."
 $txtModelConfig.BackColor = [Drawing.Color]::FromArgb(20, 20, 30)
@@ -308,7 +371,7 @@ $lblStatus.Text = "Configure your Discord bot settings above..."
 $lblStatus.ForeColor = [Drawing.Color]::DimGray
 $lblStatus.TextAlign = "MiddleCenter"
 $lblStatus.Size = New-Object Drawing.Size(600, 20)
-$lblStatus.Location = New-Object Drawing.Point(25, 760)
+$lblStatus.Location = New-Object Drawing.Point(25, 810)
 $form.Controls.Add($lblStatus)
 
 # Save Button
@@ -318,7 +381,7 @@ $btnSave.BackColor = [Drawing.Color]::FromArgb(100, 200, 255)
 $btnSave.ForeColor = [Drawing.Color]::Black
 $btnSave.FlatStyle = "Flat"
 $btnSave.Font = $fontButton
-$btnSave.Location = New-Object Drawing.Point(25, 790)
+$btnSave.Location = New-Object Drawing.Point(25, 840)
 $btnSave.Size = New-Object Drawing.Size(600, 50)
 $btnSave.Enabled = $false
 $form.Controls.Add($btnSave)
@@ -329,7 +392,7 @@ $btnCancel.Text = "Cancel"
 $btnCancel.BackColor = [Drawing.Color]::FromArgb(60, 60, 70)
 $btnCancel.ForeColor = [Drawing.Color]::White
 $btnCancel.FlatStyle = "Flat"
-$btnCancel.Location = New-Object Drawing.Point(25, 850)
+$btnCancel.Location = New-Object Drawing.Point(25, 900)
 $btnCancel.Size = New-Object Drawing.Size(600, 50)
 $btnCancel.Font = $fontButton
 $form.Controls.Add($btnCancel)
@@ -435,6 +498,14 @@ $btnSave.Add_Click({
         $methodMap = @("search", "fetch", "hybrid")
         $internetMethodValue = $methodMap[$internetMethod]
         
+        # Get chat session settings
+        $sessionTimeout = $txtSessionTimeout.Text.Trim()
+        $maxSessionsPerUser = $txtMaxSessions.Text.Trim()
+        $maxMessagesPerSession = $txtMaxMessages.Text.Trim()
+        
+        # Convert hours to milliseconds
+        $sessionTimeoutMs = [int]$sessionTimeout * 60 * 60 * 1000
+
         # Create .env file
         $envContent = @"
 # Discord Bot Configuration
@@ -450,6 +521,11 @@ INTERNET_ACCESS=$internetEnabled
 INTERNET_METHOD=$internetMethodValue
 ALLOWED_DOMAINS=$allowedDomains
 RATE_LIMIT=$rateLimit
+
+# Chat Session Configuration
+SESSION_TIMEOUT=$sessionTimeoutMs
+MAX_SESSIONS_PER_USER=$maxSessionsPerUser
+MAX_MESSAGES_PER_SESSION=$maxMessagesPerSession
 
 # Optional: Custom settings
 # MAX_PROMPT_LOG_ENTRIES=1000
