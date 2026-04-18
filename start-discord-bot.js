@@ -3,7 +3,7 @@ const TokenDiscordBot = require('./discord-ollama-bot');
 
 const config = {
     botToken: process.env.DISCORDBOTTOKEN,
-    ownerId: process.env.OWNER_ID || '1326557394171592717'
+    ownerId: process.env.OWNER_ID
 };
 
 console.log('Starting Discord Token Bot...\n');
