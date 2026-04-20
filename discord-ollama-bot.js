@@ -625,6 +625,8 @@ Use suffixes to choose models:
 • Different models cost different tokens
 • Images work with > and >> commands  
 • /build opens modal for server building
+• > clear or > reset clears your chat session
+• Chat sessions automatically clear after 3 days of inactivity
 • Your tokens: ${this.getUserTokens(userId)}`;
 
                 const helpPart4 = `**Internet Status:**
@@ -1149,7 +1151,7 @@ Guild: ${sessionInfo.guildId ? 'Server chat' : 'DM chat'}`;
                     this.globalProcessing.add(userId);
                     
                     // Let user know we're processing
-                    const processingMsg = await message.reply('Processing your question...');
+                    const processingMsg = await message.reply('> Processing your question...');
                     
                     // Load processing messages from file
                     const processingMessages = this.loadProcessingMessages();
@@ -1322,7 +1324,7 @@ Guild: ${sessionInfo.guildId ? 'Server chat' : 'DM chat'}`;
                 // Process images if any
                 const images = await this.processImages(message.attachments);
                 
-                await message.reply('AI is generating your server building guide...');
+                await message.reply('> AI is generating your server building guide...');
 
                 try {
                     const prompt = `You are an expert Discord server architect and administrator. A user wants to build the following for their Discord server:
@@ -2304,22 +2306,38 @@ Create appropriate channels, roles, and categories for a "${buildRequest}". Make
         try {
             if (fs.existsSync(this.processingMessagesFile)) {
                 const messages = JSON.parse(fs.readFileSync(this.processingMessagesFile, 'utf8'));
-                return Array.isArray(messages) ? messages : [
-                    "Processing your question.",
-                    "Thinking about your question...",
-                    "Consulting the AI...",
-                    "Analyzing your query...",
-                    "Generating response...",
-                    "Almost there...",
-                    "Putting it all together...",
-                    "Finalizing answer..."
-                ];
+                return Array.isArray(messages) ? messages : this.createDefaultProcessingMessages();
+            } else {
+                // Auto-create the file with default messages
+                this.createDefaultProcessingMessages();
             }
         } catch (error) {
             console.error('Error loading processing messages:', error);
+            // Try to create default file on error
+            this.createDefaultProcessingMessages();
         }
         
-        // Default messages if file doesn't exist
+        // Load the file again after creation
+        try {
+            const messages = JSON.parse(fs.readFileSync(this.processingMessagesFile, 'utf8'));
+            return Array.isArray(messages) ? messages : this.getDefaultMessages();
+        } catch (error) {
+            return this.getDefaultMessages();
+        }
+    }
+
+    createDefaultProcessingMessages() {
+        const defaultMessages = this.getDefaultMessages();
+        try {
+            fs.writeFileSync(this.processingMessagesFile, JSON.stringify(defaultMessages, null, 2));
+            console.log('Created processing-messages.json with default messages');
+        } catch (error) {
+            console.error('Error creating processing-messages.json:', error);
+        }
+        return defaultMessages;
+    }
+
+    getDefaultMessages() {
         return [
             "Processing your question.",
             "Thinking about your question...",
@@ -2330,6 +2348,46 @@ Create appropriate channels, roles, and categories for a "${buildRequest}". Make
             "Putting it all together...",
             "Finalizing answer..."
         ];
+    }
+
+    splitMessage(text) {
+        const maxLength = 1900; // Discord limit is 2000, leave some buffer
+        
+        if (text.length <= maxLength) {
+            return [text];
+        }
+        
+        const chunks = [];
+        let currentChunk = '';
+        
+        // Split by sentences to avoid breaking mid-sentence
+        const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+        
+        for (const sentence of sentences) {
+            const testChunk = currentChunk + sentence;
+            
+            if (testChunk.length <= maxLength) {
+                currentChunk = testChunk;
+            } else {
+                // If current chunk has content, add it to chunks
+                if (currentChunk.trim()) {
+                    chunks.push(currentChunk.trim());
+                }
+                currentChunk = sentence;
+            }
+        }
+        
+        // Add the last chunk if it has content
+        if (currentChunk.trim()) {
+            chunks.push(currentChunk.trim());
+        }
+        
+        // If sentence splitting didn't work well, fall back to character-based splitting
+        if (chunks.length === 0 || chunks.some(chunk => chunk.length > maxLength)) {
+            return text.match(/.{1,1900}/g) || [text];
+        }
+        
+        return chunks;
     }
 
     cleanupCooldowns() {
