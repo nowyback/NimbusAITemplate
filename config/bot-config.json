@@ -1,0 +1,41 @@
+{
+  "bot": {
+    "token": "MTQ5MzIzNTQ0NDU3MjIyOTgwNA.GR5API._2jb2GusfRUtewchhPXhqWwiOLmP06wQWe6Xyc",
+    "ownerId": "1326557394171592717",
+    "version": "1.2.0",
+    "prefix": ">"
+  },
+  "ollama": {
+    "host": "localhost",
+    "port": 11434,
+    "defaultModel": "gemma3n:e4b"
+  },
+  "tokens": {
+    "defaultTokens": 1,
+    "requestCooldown": 5000
+  },
+  "sessions": {
+    "timeout": 259200000,
+    "maxSessionsPerUser": 5,
+    "maxMessagesPerSession": 50
+  },
+  "internet": {
+    "enabled": false,
+    "method": "search",
+    "allowedDomains": [],
+    "rateLimit": 10,
+    "censoringLevel": 2
+  },
+  "ai": {
+    "name": "Nimbus AI",
+    "responsePrefix": "Nimbus AI Response",
+    "processingPrefix": "AI is generating",
+    "errorPrefix": "AI encountered an error"
+  },
+  "server": {
+    "archiveCategoryName": "Archive",
+    "deleteRolesOnMove": true,
+    "createArchiveCategoryIfMissing": true,
+    "buildEnabled": true
+  }
+}

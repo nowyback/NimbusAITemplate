@@ -1,11 +1,12 @@
 {
-  "name": "token-discord-bot",
-  "version": "1.0.0",
-  "description": "Discord bot with token system for question management",
+  "name": "nimbus-ai",
+  "version": "1.3.0",
+  "description": "Official Nimbus AI Template with addons",
   "main": "discord-ollama-bot.js",
   "scripts": {
-    "start": "node start-discord-bot.js",
-    "setup": "node setup-discord-bot.js"
+    "start": "node discord-ollama-bot.js",
+    "start-legacy": "node archive/start-discord-bot.js",
+    "setup": "Installers\\Config\\config.bat"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
@@ -14,9 +15,14 @@
   "keywords": [
     "discord",
     "bot",
-    "tokens",
-    "questions"
+    "addons",
+    "modular",
+    "ai",
+    "internet",
+    "images",
+    "server-management",
+    "tokens"
   ],
-  "author": "",
+  "author": "CHROMESHOT Studio",
   "license": "MIT"
 }

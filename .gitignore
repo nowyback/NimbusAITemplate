@@ -14,9 +14,22 @@ chat-sessions.json
 discord-models.txt
 discord-models-config.json
 
+# Archive folder (old system)
+archive/
+
+# Addon temporary files
+addons/*/temp/
+addons/*/logs/
+temp/
+
+# Configuration and compatibility files
+check-config-compatibility.js
+migrate.js
+
 # Test & Diagnostic Files
 test-connection.js
 check-ollama-models.js
+test-internet.js
 *.test.js
 test/
 tests/

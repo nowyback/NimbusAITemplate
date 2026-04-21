@@ -1,0 +1,16 @@
+{
+  "name": "server-building",
+  "version": "1.0.0",
+  "description": "Server building addon for AI-powered Discord server setup",
+  "main": "index.js",
+  "dependencies": {},
+  "keywords": ["server", "building", "discord", "channels", "roles"],
+  "author": "Nimbus AI",
+  "license": "MIT",
+  "addon": {
+    "name": "Server Building",
+    "category": "administration",
+    "permissions": ["MANAGE_GUILD", "MANAGE_CHANNELS", "MANAGE_ROLES"],
+    "dependencies": []
+  }
+}

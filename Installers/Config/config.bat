@@ -2,11 +2,12 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo    Discord Bot Configuration Setup
+echo    Nimbus AI Bot Configuration Setup
+echo    (Addon System)
 echo ========================================
 echo.
-echo This will help you configure your Discord bot
-echo with automatic model detection and configuration
+echo This will help you configure your Nimbus AI bot
+echo with the new modular addon system
 echo.
 echo Requirements:
 echo - Ollama must be installed and running
@@ -40,29 +41,36 @@ if errorlevel 1 (
     echo.
 )
 
-echo Starting configuration tool...
+echo Starting addon system configuration tool...
 echo.
 
 REM Run the PowerShell configuration script
 powershell -ExecutionPolicy Bypass -File ".\config.ps1"
 
 REM Check if configuration was successful
-if exist ".env" (
+if exist "config\bot-config.json" (
     echo.
     echo ========================================
     echo    Configuration Complete!
     echo ========================================
     echo.
     echo Files created:
-    echo - .env (bot configuration)
+    echo - config\bot-config.json (main bot configuration)
+    echo - config\addons.json (addon configuration)
     if exist "discord-models.txt" (
         echo - discord-models.txt (model configuration)
     )
     echo.
     echo Next steps:
-    echo 1. Review the generated .env file
+    echo 1. Review the generated configuration files
     echo 2. Start the bot with: npm start
-    echo 3. Use !help in Discord to see all commands
+    echo 3. Use /help in Discord to see all commands
+    echo 4. Use /addons to manage addons
+    echo.
+    echo Available addons:
+    echo - Internet Access (web search, URL fetching)
+    echo - Image Processing (generation and analysis)
+    echo - Server Building (AI-powered server setup)
     echo.
 ) else (
     echo.

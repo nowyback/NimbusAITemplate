@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "generation": {
+    "enabled": true,
+    "defaultModel": "dall-e",
+    "maxSize": "1024x1024",
+    "quality": "standard",
+    "maxRequestsPerHour": 5
+  },
+  "analysis": {
+    "enabled": true,
+    "maxImageSize": "20MB",
+    "supportedFormats": ["png", "jpg", "jpeg", "gif", "webp"]
+  },
+  "processing": {
+    "timeout": 30000,
+    "maxConcurrent": 3
+  }
+}

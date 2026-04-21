@@ -1,0 +1,16 @@
+{
+  "name": "internet-access",
+  "version": "1.0.0",
+  "description": "Internet access addon for web search and content fetching",
+  "main": "index.js",
+  "dependencies": {},
+  "keywords": ["internet", "search", "fetch", "web"],
+  "author": "Nimbus AI",
+  "license": "MIT",
+  "addon": {
+    "name": "Internet Access",
+    "category": "utility",
+    "permissions": [],
+    "dependencies": []
+  }
+}

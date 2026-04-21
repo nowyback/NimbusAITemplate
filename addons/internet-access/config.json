@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "searchEngine": "duckduckgo",
+  "maxResults": 3,
+  "requestTimeout": 10000,
+  "maxContentSize": 2000,
+  "allowedDomains": [],
+  "blockedDomains": [
+    "pornhub.com",
+    "xvideos.com",
+    "adultfriendfinder.com",
+    "malware.com",
+    "virus.com"
+  ],
+  "censoring": {
+    "enabled": true,
+    "level": 2,
+    "customFilters": []
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 10,
+    "blockDuration": 60000
+  }
+}

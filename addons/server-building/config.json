@@ -1,0 +1,39 @@
+{
+  "enabled": true,
+  "building": {
+    "maxChannels": 50,
+    "maxRoles": 25,
+    "maxCategories": 10,
+    "archiveCategoryName": "Archive",
+    "deleteRolesOnMove": true,
+    "createArchiveCategoryIfMissing": true
+  },
+  "ai": {
+    "model": "llama3:8b",
+    "maxResponseLength": 2000,
+    "temperature": 0.7
+  },
+  "templates": {
+    "gaming": {
+      "name": "Gaming Server",
+      "description": "A server for gaming communities",
+      "categories": ["General", "Gaming", "Voice Channels"],
+      "channels": ["welcome", "rules", "announcements", "general-chat", "gaming-chat", "media"],
+      "roles": ["Member", "Gamer", "Moderator", "Admin"]
+    },
+    "community": {
+      "name": "Community Server",
+      "description": "A server for general communities",
+      "categories": ["General", "Discussion", "Resources"],
+      "channels": ["welcome", "rules", "announcements", "general-chat", "introductions", "resources"],
+      "roles": ["Member", "Contributor", "Moderator", "Admin"]
+    },
+    "study": {
+      "name": "Study Server",
+      "description": "A server for study groups and learning",
+      "categories": ["General", "Study Rooms", "Resources"],
+      "channels": ["welcome", "rules", "announcements", "general-chat", "study-help", "resources"],
+      "roles": ["Student", "Tutor", "Moderator", "Admin"]
+    }
+  }
+}

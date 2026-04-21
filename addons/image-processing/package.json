@@ -1,0 +1,16 @@
+{
+  "name": "image-processing",
+  "version": "1.0.0",
+  "description": "Image processing addon for AI image generation and analysis",
+  "main": "index.js",
+  "dependencies": {},
+  "keywords": ["image", "generation", "analysis", "ai"],
+  "author": "Nimbus AI",
+  "license": "MIT",
+  "addon": {
+    "name": "Image Processing",
+    "category": "utility",
+    "permissions": ["ATTACH_FILES"],
+    "dependencies": []
+  }
+}
