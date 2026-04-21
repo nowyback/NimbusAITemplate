@@ -1,8 +1,8 @@
 {
   "bot": {
-    "token": "MTQ5MzIzNTQ0NDU3MjIyOTgwNA.GR5API._2jb2GusfRUtewchhPXhqWwiOLmP06wQWe6Xyc",
-    "ownerId": "1326557394171592717",
-    "version": "1.2.0",
+    "token": "PLACEHOLDER",
+    "ownerId": "PLACEHOLDER",
+    "version": "PLACEHOLDER",
     "prefix": ">"
   },
   "ollama": {
