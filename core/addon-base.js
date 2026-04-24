@@ -55,17 +55,34 @@ class AddonBase extends EventEmitter {
             name,
             handler,
             description: options.description || '',
-            usage: options.usage || '',
-            permissions: options.permissions || [],
-            cooldown: options.cooldown || 0,
             category: options.category || 'general',
-            enabled: options.enabled !== false
+            cooldown: options.cooldown || 0,
+            enabled: options.enabled !== false, // Default to true
+            usage: options.usage || '',
+            permissions: options.permissions || []
         };
         
         this.commands.set(name, command);
+        this.log(`Registered command: ${name}`);
         return command;
     }
-
+    
+    // Register a slash command
+    registerSlashCommand(name, handler, options = {}) {
+        const command = {
+            name,
+            handler,
+            description: options.description || '',
+            category: options.category || 'general',
+            permissions: options.permissions || [],
+            type: 'slash'
+        };
+        
+        this.commands.set(name, command);
+        this.log(`Registered slash command: ${name}`);
+        return command;
+    }
+    
     // Unregister a command
     unregisterCommand(name) {
         return this.commands.delete(name);
@@ -79,13 +96,9 @@ class AddonBase extends EventEmitter {
         }));
     }
 
-    // Check if user has permission to use command
+    // Check if user has permission for command
     hasPermission(userId, command) {
-        if (!command.permissions || command.permissions.length === 0) {
-            return true;
-        }
-        
-        // Check if user is bot owner
+        // Owner has all permissions
         if (userId === this.bot.ownerId) {
             return true;
         }
@@ -119,6 +132,46 @@ class AddonBase extends EventEmitter {
         } catch (error) {
             this.logger.error(`[Addon] Error in command ${commandName}:`, error);
             await message.reply('An error occurred while executing this command.');
+            return true;
+        }
+    }
+
+    // Handle slash command execution
+    async handleSlashCommand(interaction, commandName) {
+        const command = this.commands.get(commandName);
+        
+        if (!command) {
+            return false;
+        }
+        
+        if (!command.enabled) {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply('This command is currently disabled.');
+            } else if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply('This command is currently disabled.');
+            }
+            return true;
+        }
+        
+        if (!this.hasPermission(interaction.user.id, command)) {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply('You do not have permission to use this command.');
+            } else if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply('You do not have permission to use this command.');
+            }
+            return true;
+        }
+        
+        try {
+            await command.handler(interaction);
+            return true;
+        } catch (error) {
+            this.log(`Error executing slash command ${commandName}:`, error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply('An error occurred while executing this command.');
+            } else if (interaction.deferred && !interaction.replied) {
+                await interaction.editReply('An error occurred while executing this command.');
+            }
             return true;
         }
     }

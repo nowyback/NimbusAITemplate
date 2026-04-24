@@ -41,15 +41,116 @@ class ConfigManager {
 
     // Load main bot configuration
     loadMainConfig() {
-        if (fs.existsSync(this.mainConfigFile)) {
-            const data = fs.readFileSync(this.mainConfigFile, 'utf8');
-            return JSON.parse(data);
+        let config = {};
+        
+        // First try to load from .env file (primary source)
+        const envFile = path.join(__dirname, '..', '.env');
+        if (fs.existsSync(envFile)) {
+            this.logger.log('[Config] Loading configuration from .env file');
+            config = this.loadFromEnv();
+            
+            // Only use JSON as fallback for missing values
+            if (fs.existsSync(this.mainConfigFile)) {
+                this.logger.log('[Config] Using JSON config for missing values');
+                const jsonConfig = JSON.parse(fs.readFileSync(this.mainConfigFile, 'utf8'));
+                config = this.mergeConfigs(config, jsonConfig);
+            }
+        } else if (fs.existsSync(this.mainConfigFile)) {
+            // Fallback to JSON if no .env exists
+            this.logger.log('[Config] Loading configuration from JSON file');
+            config = JSON.parse(fs.readFileSync(this.mainConfigFile, 'utf8'));
         }
         
-        // Create default config if it doesn't exist
-        const defaultConfig = this.getDefaultConfig();
-        this.saveMainConfig(defaultConfig);
-        return defaultConfig;
+        // If no config files exist, create default
+        if (Object.keys(config).length === 0) {
+            this.logger.log('[Config] Creating default configuration');
+            config = this.getDefaultConfig();
+            this.saveMainConfig(config);
+        }
+        
+        return config;
+    }
+    
+    // Merge configs with priority to source1
+    mergeConfigs(source1, source2) {
+        const result = {};
+        
+        // Copy keys from source1 if they are not undefined
+        for (const key in source1) {
+            if (source1.hasOwnProperty(key)) {
+                if (source1[key] !== undefined) {
+                    if (typeof source1[key] === 'object' && source1[key] !== null && !Array.isArray(source1[key])) {
+                        result[key] = this.mergeConfigs(source1[key], source2[key] || {});
+                    } else {
+                        result[key] = source1[key];
+                    }
+                }
+            }
+        }
+        
+        // Add missing keys from source2
+        for (const key in source2) {
+            if (source2.hasOwnProperty(key) && result[key] === undefined) {
+                result[key] = source2[key];
+            }
+        }
+        
+        return result;
+    }
+
+    // Load configuration from .env file
+    loadFromEnv() {
+        const envFile = path.join(__dirname, '..', '.env');
+        const envContent = fs.readFileSync(envFile, 'utf8');
+        const envVars = {};
+        
+        envContent.split('\n').forEach(line => {
+            const match = line.match(/^([^=]+)=(.*)$/);
+            if (match && !line.startsWith('#')) {
+                envVars[match[1]] = match[2];
+            }
+        });
+        
+        return {
+            bot: {
+                token: envVars.DISCORDBOTTOKEN,
+                ownerId: envVars.OWNER_ID,
+                version: envVars.VERSION,
+                prefix: envVars.BOT_PREFIX
+            },
+            ollama: {
+                host: envVars.OLLAMA_HOST,
+                port: envVars.OLLAMA_PORT ? parseInt(envVars.OLLAMA_PORT) : undefined,
+                defaultModel: envVars.DEFAULT_MODEL
+            },
+            tokens: {
+                defaultTokens: envVars.DEFAULT_TOKENS ? parseInt(envVars.DEFAULT_TOKENS) : undefined,
+                requestCooldown: envVars.REQUEST_COOLDOWN ? parseInt(envVars.REQUEST_COOLDOWN) : undefined
+            },
+            sessions: {
+                timeout: envVars.SESSION_TIMEOUT ? parseInt(envVars.SESSION_TIMEOUT) : undefined,
+                maxSessionsPerUser: envVars.MAX_SESSIONS_PER_USER ? parseInt(envVars.MAX_SESSIONS_PER_USER) : undefined,
+                maxMessagesPerSession: envVars.MAX_MESSAGES_PER_SESSION ? parseInt(envVars.MAX_MESSAGES_PER_SESSION) : undefined
+            },
+            internet: {
+                enabled: envVars.INTERNET_ACCESS === 'true',
+                method: envVars.INTERNET_METHOD,
+                allowedDomains: envVars.ALLOWED_DOMAINS ? envVars.ALLOWED_DOMAINS.split(',').map(d => d.trim()) : undefined,
+                rateLimit: envVars.RATE_LIMIT ? parseInt(envVars.RATE_LIMIT) : undefined
+            },
+            ai: {
+                name: envVars.AI_NAME,
+                responsePrefix: envVars.AI_RESPONSE_PREFIX,
+                processingPrefix: envVars.AI_PROCESSING_PREFIX,
+                errorPrefix: envVars.AI_ERROR_PREFIX
+            },
+            server: {
+                archiveCategoryName: envVars.ARCHIVE_CATEGORY_NAME,
+                deleteRolesOnMove: envVars.DELETE_ROLES_ON_MOVE === 'true',
+                createArchiveCategoryIfMissing: envVars.CREATE_ARCHIVE_CATEGORY_IF_MISSING === 'true',
+                buildEnabled: envVars.BUILD_ENABLED === 'true'
+            }
+        };
     }
 
     // Load addons configuration
@@ -318,6 +419,22 @@ class ConfigManager {
         return errors;
     }
 
+    // Get configuration value by key
+    get(key) {
+        const keys = key.split('.');
+        let value = this.config;
+        
+        for (const k of keys) {
+            if (value && typeof value === 'object' && value.hasOwnProperty(k)) {
+                value = value[k];
+            } else {
+                return undefined;
+            }
+        }
+        
+        return value;
+    }
+    
     // Get full configuration
     getAllConfig() {
         return JSON.parse(JSON.stringify(this.config));

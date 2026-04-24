@@ -4,8 +4,9 @@
   "description": "Official Nimbus AI Template with addons",
   "main": "discord-ollama-bot.js",
   "scripts": {
-    "start": "node discord-ollama-bot.js",
-    "start-legacy": "node archive/start-discord-bot.js",
+    "start": "node start-bot.js",
+    "start-legacy": "node discord-ollama-bot.js",
+    "start-modular": "node start-bot.js",
     "setup": "Installers\\Config\\config.bat"
   },
   "dependencies": {

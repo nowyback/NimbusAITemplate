@@ -165,25 +165,31 @@ class ImageProcessingAddon extends AddonBase {
         };
     }
 
-    // Analyze image using AI (placeholder implementation)
+    // Analyze image using AI
     async analyzeImage(imagePath, question) {
-        // This is a placeholder - in a real implementation, you would
-        // integrate with an image analysis API like GPT-4 Vision, etc.
-        
         this.log(`Image analysis request: "${question}" for image: ${imagePath}`);
         
-        // Simulate analysis delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Return a mock analysis for now
-        const analyses = [
-            "This image appears to contain various visual elements with interesting colors and composition.",
-            "I can see this is a digital image with certain characteristics that make it unique.",
-            "The image shows content that could be described as having artistic or informational value.",
-            "Based on the visual elements, this image seems to serve a specific purpose or convey a message."
-        ];
-        
-        return analyses[Math.floor(Math.random() * analyses.length)];
+        if (!this.bot.ollama) {
+            throw new Error('Core Ollama service is not available.');
+        }
+
+        try {
+            // Read image and convert to base64
+            const imageBuffer = fs.readFileSync(imagePath);
+            const base64Image = imageBuffer.toString('base64');
+            
+            // Use the core ollama service to perform the analysis
+            const response = await this.bot.ollama.askOllama(
+                question, 
+                this.bot.ollama.config.get('ollama.defaultModel'), 
+                [base64Image]
+            );
+            
+            return response;
+        } catch (error) {
+            this.log(`Error in analyzeImage: ${error.message}`, 'error');
+            throw error;
+        }
     }
 
     // Handle generate command

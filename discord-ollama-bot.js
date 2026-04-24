@@ -1,33 +1,31 @@
 const TokenDiscordBot = require('./core/bot');
+const logger = console;
 
 async function main() {
-    console.log('[Main] Starting Nimbus AI Bot...');
-    
-    const bot = new TokenDiscordBot();
-    
     try {
+        // Create and start bot
+        const bot = new TokenDiscordBot();
+        
+        logger.log('[Main] Starting Nimbus AI Bot...');
         await bot.start();
-        console.log('[Main] Bot started successfully!');
+        
+        logger.log('[Main] Bot started successfully!');
+        
     } catch (error) {
-        console.error('[Main] Failed to start bot:', error);
+        logger.error('[Main] Fatal error:', error);
         process.exit(1);
     }
     
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
         console.log('[Main] Received SIGINT, shutting down gracefully...');
-        await bot.stop();
         process.exit(0);
     });
     
     process.on('SIGTERM', async () => {
         console.log('[Main] Received SIGTERM, shutting down gracefully...');
-        await bot.stop();
         process.exit(0);
     });
 }
 
-main().catch(error => {
-    console.error('[Main] Unhandled error:', error);
-    process.exit(1);
-});
+main();

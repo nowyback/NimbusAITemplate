@@ -263,6 +263,31 @@ class AddonRegistry {
             }
         }
 
+        // FALLBACK: If no specific command matches, use core Ollama service
+        // treat the whole content as a question for the AI.
+        const question = content.slice(1).trim();
+        if (question && this.bot.ollama) {
+            await this.bot.ollama.handleChat(message, question);
+            return true;
+        }
+
+        return false;
+    }
+
+    // Handle slash command and route to appropriate addon
+    async handleSlashCommand(interaction) {
+        const { commandName } = interaction;
+        
+        // Find addon that handles this slash command
+        for (const addon of this.addons.values()) {
+            if (addon.enabled && addon.commands.has(commandName)) {
+                const command = addon.commands.get(commandName);
+                if (command.type === 'slash') {
+                    return await addon.handleSlashCommand(interaction, commandName);
+                }
+            }
+        }
+
         return false;
     }
 

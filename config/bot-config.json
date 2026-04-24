@@ -1,12 +1,13 @@
 {
+  "_comment": "SECURITY: Sensitive data like tokens, owner ID, and version should ONLY be stored in .env file. Never put real credentials here. This is a fallback config file.",
   "bot": {
-    "token": "PLACEHOLDER",
-    "ownerId": "PLACEHOLDER",
-    "version": "PLACEHOLDER",
+    "token": "SET_IN_ENV_FILE_ONLY",
+    "ownerId": "SET_IN_ENV_FILE_ONLY",
+    "version": "SET_IN_ENV_FILE_ONLY",
     "prefix": ">"
   },
   "ollama": {
-    "host": "localhost",
+    "host": "127.0.0.1",
     "port": 11434,
     "defaultModel": "gemma3n:e4b"
   },
