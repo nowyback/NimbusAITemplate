@@ -166,7 +166,7 @@ class ImageProcessingAddon extends AddonBase {
     }
 
     // Analyze image using AI
-    async analyzeImage(imagePath, question) {
+    async analyzeImage(imagePath, question, message = null) {
         this.log(`Image analysis request: "${question}" for image: ${imagePath}`);
         
         if (!this.bot.ollama) {
@@ -178,11 +178,17 @@ class ImageProcessingAddon extends AddonBase {
             const imageBuffer = fs.readFileSync(imagePath);
             const base64Image = imageBuffer.toString('base64');
             
+            // Get userId and guildId from message if available
+            const userId = message ? message.author.id : null;
+            const guildId = message ? message.guildId : null;
+            
             // Use the core ollama service to perform the analysis
             const response = await this.bot.ollama.askOllama(
                 question, 
                 this.bot.ollama.config.get('ollama.defaultModel'), 
-                [base64Image]
+                [base64Image],
+                userId,
+                guildId
             );
             
             return response;
@@ -273,7 +279,7 @@ class ImageProcessingAddon extends AddonBase {
             
             try {
                 // Analyze the image
-                const analysis = await this.analyzeImage(imagePath, question);
+                const analysis = await this.analyzeImage(imagePath, question, message);
                 
                 const embed = {
                     title: 'Image Analysis',

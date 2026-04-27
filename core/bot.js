@@ -127,6 +127,12 @@ class TokenDiscordBot {
                 return;
             }
             
+            // Ignore empty messages
+            if (!message.content.trim()) {
+                this.logger.log('[Bot] Ignoring empty message');
+                return;
+            }
+            
             // Emit message received event
             eventBus.emit(Events.MESSAGE_RECEIVED, {
                 message,
@@ -139,8 +145,8 @@ class TokenDiscordBot {
             const handled = await this.registry.handleMessage(message);
             this.logger.log(`[Bot] Command handled: ${handled}`);
             
-            // Handle AI chat with model suffix if not a command
-            if (!handled && !message.content.startsWith('>')) {
+            // Handle AI chat only if message starts with >
+            if (!handled && message.content.startsWith('>')) {
                 this.logger.log(`[Bot] Handling AI chat for: "${message.content}"`);
                 try {
                     await this.handleAIChat(message);
@@ -243,17 +249,12 @@ class TokenDiscordBot {
                 .toJSON(),
                 
             new SlashCommandBuilder()
-                .setName('models')
-                .setDescription('Show available AI models')
-                .toJSON(),
-                
-            new SlashCommandBuilder()
                 .setName('debug')
-                .setDescription('Debug information for AI responses')
+                .setDescription('Show debug information for AI responses')
                 .addStringOption(option => 
                     option.setName('id')
-                        .setDescription('Message ID to debug')
-                        .setRequired(true))
+                        .setDescription('Message ID to debug (optional)')
+                        .setRequired(false))
                 .toJSON(),
                 
             new SlashCommandBuilder()
@@ -297,7 +298,17 @@ class TokenDiscordBot {
                     // Let addons handle their own slash commands
                     const handled = await this.registry.handleSlashCommand(interaction);
                     if (!handled) {
-                        await interaction.reply('Unknown command.');
+                        await interaction.reply({
+                            embeds: [{
+                                title: '❌ Unknown Command',
+                                description: `The command \`/${commandName}\` is not recognized.\n\nUse \`/help\` to see available commands.`,
+                                color: 0xFF0000,
+                                footer: {
+                                    text: 'Bot Command Error'
+                                },
+                                timestamp: new Date().toISOString()
+                            }]
+                        });
                     }
             }
         } catch (error) {
@@ -305,12 +316,28 @@ class TokenDiscordBot {
             
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
-                    content: 'An error occurred while executing this command.',
+                    embeds: [{
+                        title: '❌ Command Error',
+                        description: 'An error occurred while executing this command.',
+                        color: 0xFF0000,
+                        footer: {
+                            text: 'Bot System Error'
+                        },
+                        timestamp: new Date().toISOString()
+                    }],
                     ephemeral: true
                 });
             } else if (interaction.deferred && !interaction.replied) {
                 await interaction.editReply({
-                    content: 'An error occurred while executing this command.'
+                    embeds: [{
+                        title: '❌ Command Error',
+                        description: 'An error occurred while executing this command.',
+                        color: 0xFF0000,
+                        footer: {
+                            text: 'Bot System Error'
+                        },
+                        timestamp: new Date().toISOString()
+                    }]
                 });
             }
         }
@@ -320,40 +347,37 @@ class TokenDiscordBot {
     async handleHelpCommand(interaction) {
         await interaction.deferReply();
         
-        const commands = this.registry.getAllCommands();
-        const enabledAddons = this.registry.getEnabledAddons();
+        // Define the specific commands to show
+        const mainCommands = [
+            { name: 'addons', description: 'Manage addons' },
+            { name: 'build', description: 'Build server' },
+            { name: 'debug', description: 'Show debug information' },
+            { name: 'help', description: 'Show help information' },
+            { name: 'models', description: 'Show available AI models' },
+            { name: 'stop', description: 'Stop the bot gracefully' },
+            { name: 'tokens', description: 'Check your token balance' }
+        ];
         
         const embed = {
             title: 'Bot Help',
             color: 0x0099FF,
-            description: `**Prefix:** ${this.config.get('bot.prefix')}\n**Enabled Addons:** ${enabledAddons.length}`,
-            fields: [],
+            description: `**AI Chat Prefix:** >\n\nUse \`>\` before your message to chat with AI!`,
+            fields: [
+                {
+                    name: '🤖 Available Commands',
+                    value: mainCommands.map(cmd => `\`/${cmd.name}\` - ${cmd.description}`).join('\n'),
+                    inline: false
+                },
+                {
+                    name: '💡 Tips',
+                    value: '• Type `> your message` to chat with AI\n• Use `/debug` to see conversation history\n• Sessions expire after 2 hours of inactivity',
+                    inline: false
+                }
+            ],
             footer: {
                 text: `Bot v${this.config.get('bot.version')} | Your tokens: ${this.getUserTokens(interaction.user.id)}`
             }
         };
-
-        // Group commands by category
-        const commandsByCategory = {};
-        for (const command of commands) {
-            if (!commandsByCategory[command.category]) {
-                commandsByCategory[command.category] = [];
-            }
-            commandsByCategory[command.category].push(command);
-        }
-
-        // Add command categories
-        for (const [category, categoryCommands] of Object.entries(commandsByCategory)) {
-            const commandList = categoryCommands
-                .map(cmd => `\`${this.config.get('bot.prefix')}${cmd.name}\` - ${cmd.description}`)
-                .join('\n');
-                
-            embed.fields.push({
-                name: category.charAt(0).toUpperCase() + category.slice(1),
-                value: commandList,
-                inline: false
-            });
-        }
 
         await interaction.editReply({ embeds: [embed] });
     }
@@ -549,12 +573,33 @@ class TokenDiscordBot {
     async handleDebugCommand(interaction) {
         const messageId = interaction.options.getString('id');
         
-        // Only bot owner can use debug command
-        if (interaction.user.id !== this.config.get('bot.ownerId')) {
-            await interaction.reply({
-                content: 'Only the bot owner can use debug commands.',
-                ephemeral: true
-            });
+        // If no ID provided, show recent debug info for this user
+        if (!messageId) {
+            const userDebugInfo = this.debugMessages.filter(info => info.userId === interaction.user.id).slice(-5);
+            
+            if (userDebugInfo.length === 0) {
+                await interaction.reply({
+                    content: 'No recent AI conversations found. Use `> your message` to chat with AI!',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            const embed = {
+                title: '🔍 Your Recent AI Conversations',
+                color: 0x0099FF,
+                fields: userDebugInfo.map(debug => ({
+                    name: `📝 ${debug.question.substring(0, 50)}...`,
+                    value: `**Model:** ${debug.model}\n**ID:** \`${debug.id}\`\n**Time:** ${new Date(debug.timestamp).toLocaleString()}`,
+                    inline: false
+                })),
+                footer: {
+                    text: 'Use /debug <id> to see full conversation details'
+                },
+                timestamp: new Date().toISOString()
+            };
+            
+            await interaction.reply({ embeds: [embed] });
             return;
         }
         
@@ -563,6 +608,15 @@ class TokenDiscordBot {
         if (!debugInfo) {
             await interaction.reply({
                 content: `No debug information found for message ID: ${messageId}`,
+                ephemeral: true
+            });
+            return;
+        }
+        
+        // Only allow users to see their own debug info (or bot owner)
+        if (debugInfo.userId !== interaction.user.id && interaction.user.id !== this.config.get('bot.ownerId')) {
+            await interaction.reply({
+                content: 'You can only view your own debug information.',
                 ephemeral: true
             });
             return;
@@ -623,21 +677,28 @@ class TokenDiscordBot {
     async handleAIChat(message) {
         const content = message.content.trim();
         
+        // Remove the > prefix
+        const cleanContent = content.startsWith('>') ? content.substring(1).trim() : content;
+        
         // Parse model suffix
-        const { question, model } = this.parseModelSuffix(content);
+        const { question, model } = this.parseModelSuffix(cleanContent);
         
         this.logger.log(`[Bot] AI Chat - Question: "${question}", Model: "${model}"`);
         
         try {
             this.logger.log(`[Bot] Using Ollama handleChat method`);
             
-            // Use Ollama's handleChat method which handles everything including "Thinking..."
-            const response = await this.ollama.handleChat(message, question, model);
-            
-            this.logger.log(`[Bot] Ollama handleChat completed, response: "${response.substring(0, 50)}..."`);
-            
             // Generate unique message ID
             const messageId = this.generateMessageId();
+            
+            // Use Ollama's handleChat method which handles everything including "Thinking..."
+            const response = await this.ollama.handleChat(message, question, model, messageId);
+            
+            if (response) {
+                this.logger.log(`[Bot] Ollama handleChat completed, response: "${response.substring(0, 50)}..."`);
+            } else {
+                this.logger.log(`[Bot] Ollama handleChat completed with no response`);
+            }
             
             // Store debug info
             this.storeDebugInfo(messageId, {
@@ -645,7 +706,7 @@ class TokenDiscordBot {
                 username: message.author.tag,
                 question,
                 model,
-                response,
+                response: response || 'No response',
                 timestamp: Date.now(),
                 guildId: message.guild?.id,
                 channelId: message.channel.id

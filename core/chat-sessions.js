@@ -4,7 +4,7 @@ const path = require('path');
 class ChatSessions {
     constructor(config = {}) {
         this.sessionsFile = path.join(__dirname, 'chat-sessions.json');
-        this.sessionTimeout = config.sessionTimeout || (3 * 24 * 60 * 60 * 1000); // 3 days default
+        this.sessionTimeout = config.sessionTimeout || (2 * 60 * 60 * 1000); // 2 hours default
         this.maxSessionsPerUser = config.maxSessionsPerUser || 5;
         this.maxMessagesPerSession = config.maxMessagesPerSession || 50;
         this.sessions = this.loadSessions();
@@ -52,7 +52,6 @@ class ChatSessions {
                 createdAt: Date.now(),
                 lastActivity: Date.now(),
                 messages: [],
-                context: {},
                 model: null
             };
             
@@ -68,6 +67,7 @@ class ChatSessions {
         return session;
     }
 
+    
     // Generate session key
     getSessionKey(userId, guildId) {
         if (guildId) {
@@ -107,6 +107,7 @@ class ChatSessions {
         return session;
     }
 
+    
     // Update session context for AI
     updateContext(session) {
         const recentMessages = session.messages.slice(-10); // Last 10 messages for context

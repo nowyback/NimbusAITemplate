@@ -33,6 +33,7 @@ test-internet.js
 *.test.js
 test/
 tests/
+scripts/
 
 # Dependencies
 node_modules/

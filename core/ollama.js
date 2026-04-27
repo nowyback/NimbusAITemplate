@@ -111,27 +111,47 @@ class OllamaService {
         }
 
         let enhancedQuestion = question;
+        let messages = [];
+        
         if (userId && this.chatSessions) {
-            const conversationContext = this.chatSessions.formatConversationForAI(userId, guildId, 10);
-            if (conversationContext) {
-                enhancedQuestion = conversationContext + question;
+            const conversationHistory = this.chatSessions.getConversationHistory(userId, guildId, 10);
+            
+            this.logger.log(`[Ollama] Found ${conversationHistory.length} messages in conversation history for ${userId}`);
+            
+            if (conversationHistory.length > 0) {
+                // Build proper chat message array for Ollama
+                messages = conversationHistory.map(msg => ({
+                    role: msg.isUser ? 'user' : 'assistant',
+                    content: msg.content
+                }));
+                
+                this.logger.log(`[Ollama] Built ${messages.length} message array for context`);
+            } else {
+                this.logger.log(`[Ollama] No conversation context found`);
             }
+        } else {
+            this.logger.log(`[Ollama] No chat sessions available or no userId`);
         }
+        
+        // Add current question
+        messages.push({
+            role: 'user',
+            content: question
+        });
 
         return new Promise((resolve, reject) => {
             try {
-                const messageContent = {
-                    role: 'user',
-                    content: enhancedQuestion
-                };
-                
-                if (images && images.length > 0) {
-                    messageContent.images = images;
+                // Add images to the last user message if present
+                if (images && images.length > 0 && messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage.role === 'user') {
+                        lastMessage.images = images;
+                    }
                 }
                 
                 const postData = JSON.stringify({
                     model: selectedModel,
-                    messages: [messageContent],
+                    messages: messages,
                     stream: false
                 });
                 
@@ -156,12 +176,22 @@ class OllamaService {
                                 throw new Error(`Ollama API error: ${res.statusCode}`);
                             }
                             const response = JSON.parse(data);
+                            this.logger.log('[Ollama] Parsed response:', JSON.stringify(response, null, 2));
                             if (response.message && response.message.content) {
                                 resolve(response.message.content.trim());
+                            } else if (response.response) {
+                                // Some Ollama versions use 'response' field
+                                resolve(response.response.trim());
+                            } else if (response.content) {
+                                // Some Ollama versions use 'content' field
+                                resolve(response.content.trim());
                             } else {
+                                this.logger.log('[Ollama] Response structure:', Object.keys(response));
                                 resolve('Received an empty or invalid response from Ollama.');
                             }
                         } catch (e) {
+                            this.logger.error('[Ollama] Response parsing error:', e);
+                            this.logger.error('[Ollama] Raw response data:', data);
                             resolve('Error parsing Ollama response.');
                         }
                     });
@@ -181,7 +211,7 @@ class OllamaService {
         });
     }
 
-    async handleChat(message, question, model = null) {
+    async handleChat(message, question, model = null, messageId = null) {
         const userId = message.author.id;
         const guildId = message.guildId;
         
@@ -190,11 +220,36 @@ class OllamaService {
         // Token consumption check
         const tokenCost = 1; // Default cost
         if (this.bot.useUserTokens && !this.bot.useUserTokens(userId, tokenCost)) {
-            await message.reply(`You don't have enough tokens. This chat costs ${tokenCost} tokens.`);
+            const tokenEmbed = {
+                title: '💰 Insufficient Tokens',
+                description: `You don't have enough tokens to use the chat.\n\n**Required:** ${tokenCost} tokens\n**Use:** \`/tokens\` to check your balance`,
+                color: 0xFF9900,
+                footer: {
+                    text: 'Token System'
+                },
+                timestamp: new Date().toISOString()
+            };
+            await message.reply({ embeds: [tokenEmbed] });
             return;
         }
 
-        const typingMsg = await message.reply('Thinking...');
+        // Use bot's custom processing messages with cycling
+        let currentMsg = this.bot.getRandomProcessingMessage();
+        const typingMsg = await message.reply(currentMsg);
+        
+        // Start cycling through messages every 2 seconds
+        const messageInterval = setInterval(async () => {
+            const newMsg = this.bot.getRandomProcessingMessage();
+            if (newMsg !== currentMsg) {
+                currentMsg = newMsg;
+                try {
+                    await typingMsg.edit(currentMsg);
+                } catch (err) {
+                    // Message might be deleted, stop cycling
+                    clearInterval(messageInterval);
+                }
+            }
+        }, 7000); // Change every 2 seconds
 
         try {
             // Check for images
@@ -209,41 +264,94 @@ class OllamaService {
             }
 
             const response = await this.askOllama(question, model, images, userId, guildId);
-            
-            // Save to chat session
-            if (this.chatSessions) {
-                this.chatSessions.addMessage(userId, guildId, 'user', question);
-                this.chatSessions.addMessage(userId, guildId, 'assistant', response);
-            }
-
-            // Send response in chunks
-            const chunks = this.bot.splitMessage(response);
-            
+        
+        // Stop cycling messages when response is ready
+        clearInterval(messageInterval);
+        
+        // Check if response is an error message
+        if (response.includes('Ollama is currently unreachable') || response.includes('Error:')) {
+            // Delete the processing message
             try {
-                await typingMsg.edit(chunks[0]);
+                await typingMsg.delete();
             } catch (err) {
-                // If "Thinking..." message was deleted or expired
-                await message.channel.send(chunks[0]);
-            }
-
-            for (let i = 1; i < chunks.length; i++) {
-                await message.channel.send(chunks[i]);
+                // If message was already deleted, continue
             }
             
-            eventBus.emit(Events.RESPONSE_SENT, {
-                userId,
-                response,
-                model: this.config.get('ollama.defaultModel')
-            }, 'ollama');
+            // Create error embed
+            const errorEmbed = {
+                title: '🔌 Service Unavailable',
+                description: response,
+                color: 0xFF0000,
+                footer: {
+                    text: 'AI Service Status'
+                },
+                timestamp: new Date().toISOString()
+            };
             
-        } catch (error) {
-            this.logger.error('[Ollama] Chat handling error:', error);
-            try {
-                await typingMsg.edit(`Error: ${error.message}`);
-            } catch (e) {
-                await message.channel.send(`Error: ${error.message}`).catch(() => {});
-            }
+            await message.channel.send({ embeds: [errorEmbed] });
+            return response;
         }
+        
+        // Save to chat session
+        if (this.chatSessions) {
+            this.chatSessions.addMessage(userId, guildId, question, true, model);
+            this.chatSessions.addMessage(userId, guildId, response, false, model);
+        }
+
+        // Create embed for AI response
+        const embed = {
+            title: '🤖 AI Response',
+            description: response,
+            color: 0x0099FF,
+            footer: {
+                text: `Debug ID: ${messageId}`
+            },
+            timestamp: new Date().toISOString()
+        };
+        
+        // Delete the processing message
+        try {
+            await typingMsg.delete();
+        } catch (err) {
+            // If message was already deleted, continue
+        }
+        
+        // Send AI response as embed
+        await message.channel.send({ embeds: [embed] });
+        
+        eventBus.emit(Events.RESPONSE_SENT, {
+            userId,
+            response,
+            model: this.config.get('ollama.defaultModel')
+        }, 'ollama');
+        
+    } catch (error) {
+        // Stop cycling messages on error
+        clearInterval(messageInterval);
+        
+        this.logger.error('[Ollama] Chat handling error:', error);
+        
+        // Create error embed
+        const errorEmbed = {
+            title: '❌ Error',
+            description: `Sorry, I had trouble processing your request.\n\n**Error:** ${error.message}`,
+            color: 0xFF0000,
+            footer: {
+                text: 'Please try again later'
+            },
+            timestamp: new Date().toISOString()
+        };
+        
+        // Delete the processing message
+        try {
+            await typingMsg.delete();
+        } catch (err) {
+            // If message was already deleted, continue
+        }
+        
+        // Send error as embed
+        await message.channel.send({ embeds: [errorEmbed] }).catch(() => {});
+    }
     }
 
     async downloadImageAsBase64(url) {

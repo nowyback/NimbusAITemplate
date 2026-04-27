@@ -1,6 +1,6 @@
 {
   "name": "nimbus-ai",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Official Nimbus AI Template with addons",
   "main": "discord-ollama-bot.js",
   "scripts": {
